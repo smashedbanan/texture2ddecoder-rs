@@ -197,6 +197,33 @@ mod tests {
     }
 
     #[test]
+    fn test_UNITYCRUNCH_unpack_level() {
+        for (name, block_bytes, decode) in [
+            ("UNITYCRUNCH_DXT1", 8, decode_bc1 as DecodeFunction),
+            ("UNITYCRUNCH_DXT5", 16, decode_bc3),
+        ] {
+            let data = fs::read(get_texture_fp(&format!("{}.crn", name))).unwrap();
+            let mut info = CrnTextureInfo::default();
+            assert!(info.crnd_get_texture_info(&data, data.len() as u32));
+            for level in 0..info.levels {
+                let blocks = unpack_unity_crunch_level(&data, level).unwrap();
+                let blocks_x = ((info.width >> level).max(1) as usize).div_ceil(4);
+                let blocks_y = ((info.height >> level).max(1) as usize).div_ceil(4);
+                assert_eq!(blocks.len(), blocks_x * blocks_y * block_bytes, "{name} level {level}");
+            }
+            assert!(unpack_unity_crunch_level(&data, info.levels).is_err());
+
+            let (width, height) = (info.width as usize, info.height as usize);
+            let mut unpacked = vec![0u32; width * height];
+            let mut decoded = vec![0u32; width * height];
+            let level0 = unpack_unity_crunch_level(&data, 0).unwrap();
+            decode(&level0, width, height, &mut unpacked).unwrap();
+            decode_unity_crunch(&data, width, height, &mut decoded).unwrap();
+            assert!(unpacked == decoded, "{name}");
+        }
+    }
+
+    #[test]
     fn test_UNITYCRUNCH_DXT5A() {
         test_format("UNITYCRUNCH_DXT5A", "crn", decode_unity_crunch)
     }

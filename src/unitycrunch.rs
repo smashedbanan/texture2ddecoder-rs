@@ -22,6 +22,9 @@ fn unity_crunch_unpack_level(
     if tex_info.faces != 1 {
         return Err("Texture2D must only have 1 number of faces.");
     }
+    if level_index >= tex_info.levels {
+        return Err("Level index out of range.");
+    }
     let mut p_context: crn_unpacker::CrnUnpacker<'_> =
         crn_decomp::crnd_unpack_begin(data, data_size)?;
     let width = core::cmp::max(1, tex_info.width >> level_index);
@@ -37,6 +40,15 @@ fn unity_crunch_unpack_level(
         }),
         Err(err) => Err(err),
     }
+}
+
+/// Unpacks one mip level of Unity crunch data to its DXT blocks (BC1 for DXT1, BC3 for DXT5),
+/// row by row, each level at least one block wide and high.
+pub fn unpack_unity_crunch_level(
+    data: &[u8],
+    level_index: u32,
+) -> Result<alloc::vec::Vec<u8>, &'static str> {
+    unity_crunch_unpack_level(data, data.len() as u32, level_index).map(|handler| handler.dxt_data)
 }
 
 pub fn decode_unity_crunch(
