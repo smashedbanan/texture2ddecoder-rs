@@ -197,6 +197,22 @@ mod tests {
     }
 
     #[test]
+    fn test_BC2_BC3_color_is_four_color() {
+        // Endpoints black then white (BC1's 3-color order, q0 < q1), every selector 3.
+        let color = [0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        let mut pixels = [0u32; 16];
+        decode_bc1_block(&color, &mut pixels);
+        assert_eq!(pixels, [u32::from_le_bytes([0, 0, 0, 255]); 16]);
+        for decode in [decode_bc2_block as fn(&[u8], &mut [u32]), decode_bc3_block] {
+            decode(&[[0; 8], color].concat(), &mut pixels);
+            // (black + 2 white) / 3, not BC1's black.
+            for p in pixels {
+                assert_eq!(p.to_le_bytes()[..3], [170, 170, 170]);
+            }
+        }
+    }
+
+    #[test]
     fn test_UNITYCRUNCH_unpack_level() {
         for (name, block_bytes, decode) in [
             ("UNITYCRUNCH_DXT1", 8, decode_bc1 as DecodeFunction),
@@ -209,7 +225,11 @@ mod tests {
                 let blocks = unpack_unity_crunch_level(&data, level).unwrap();
                 let blocks_x = ((info.width >> level).max(1) as usize).div_ceil(4);
                 let blocks_y = ((info.height >> level).max(1) as usize).div_ceil(4);
-                assert_eq!(blocks.len(), blocks_x * blocks_y * block_bytes, "{name} level {level}");
+                assert_eq!(
+                    blocks.len(),
+                    blocks_x * blocks_y * block_bytes,
+                    "{name} level {level}"
+                );
             }
             assert!(unpack_unity_crunch_level(&data, info.levels).is_err());
 

@@ -1,4 +1,4 @@
-use crate::bcn::bc1::decode_bc1_block;
+use crate::bcn::bc1::decode_bc1_color_block;
 
 #[inline]
 pub fn decode_bc2_alpha(data: &[u8], outbuf: &mut [u32], channel: usize) {
@@ -18,6 +18,6 @@ pub fn decode_bc2_alpha(data: &[u8], outbuf: &mut [u32], channel: usize) {
 
 #[inline]
 pub fn decode_bc2_block(data: &[u8], outbuf: &mut [u32]) {
-    decode_bc1_block(&data[8..], outbuf);
+    decode_bc1_color_block(&data[8..], outbuf);
     decode_bc2_alpha(data, outbuf, 3);
 }

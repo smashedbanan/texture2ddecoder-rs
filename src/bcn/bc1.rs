@@ -1,7 +1,7 @@
 use crate::color::{color, rgb565_le};
 
 #[inline]
-fn _decode_bc1_block(data: &[u8], outbuf: &mut [u32], use_alpha: bool) {
+fn _decode_bc1_block(data: &[u8], outbuf: &mut [u32], use_alpha: bool, four_color: bool) {
     let q0 = u16::from_le_bytes([data[0], data[1]]);
     let q1 = u16::from_le_bytes([data[2], data[3]]);
     let (r0, g0, b0) = rgb565_le(q0);
@@ -17,7 +17,7 @@ fn _decode_bc1_block(data: &[u8], outbuf: &mut [u32], use_alpha: bool) {
     let g1 = g1 as u16;
     let b1 = b1 as u16;
 
-    if q0 > q1 {
+    if q0 > q1 || four_color {
         c[2] = color(
             ((r0 * 2 + r1) / 3) as u8,
             ((g0 * 2 + g1) / 3) as u8,
@@ -48,10 +48,17 @@ fn _decode_bc1_block(data: &[u8], outbuf: &mut [u32], use_alpha: bool) {
 
 #[inline]
 pub fn decode_bc1_block(data: &[u8], outbuf: &mut [u32]) {
-    _decode_bc1_block(data, outbuf, false)
+    _decode_bc1_block(data, outbuf, false, false)
+}
+
+/// The color half of a BC2 or BC3 block: always 4-color, whatever the endpoint order, as GPUs
+/// decode it. Only BC1 has the 3-color mode.
+#[inline]
+pub fn decode_bc1_color_block(data: &[u8], outbuf: &mut [u32]) {
+    _decode_bc1_block(data, outbuf, false, true)
 }
 
 #[inline]
 pub fn decode_bc1a_block(data: &[u8], outbuf: &mut [u32]) {
-    _decode_bc1_block(data, outbuf, true);
+    _decode_bc1_block(data, outbuf, true, false);
 }
