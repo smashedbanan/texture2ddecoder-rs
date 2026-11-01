@@ -2,15 +2,11 @@ pub(crate) mod crn_decomp;
 pub(crate) mod crn_unpacker;
 use super::crnlib::{CrnFormat, CrnTextureInfo};
 use crate::bcn;
+use crate::crunch::CrunchDecodeHandler;
 use crate::{decode_etc1, decode_etc2_rgb, decode_etc2_rgba8};
 extern crate alloc;
 
-struct CrunchDecodeHandler {
-    format: CrnFormat,
-    dxt_data: alloc::vec::Vec<u8>,
-}
-
-fn unity_crunch_unpack_level(
+pub fn unity_crunch_unpack_level(
     data: &[u8],
     data_size: u32,
     level_index: u32,
@@ -18,9 +14,6 @@ fn unity_crunch_unpack_level(
     let mut tex_info: CrnTextureInfo = CrnTextureInfo::default();
     if !tex_info.crnd_get_texture_info(data, data_size) {
         return Err("Invalid crunch texture encoding.");
-    }
-    if tex_info.faces != 1 {
-        return Err("Texture2D must only have 1 number of faces.");
     }
     if level_index >= tex_info.levels {
         return Err("Level index out of range.");
@@ -37,13 +30,14 @@ fn unity_crunch_unpack_level(
         Ok(res) => Ok(CrunchDecodeHandler {
             format: tex_info.format,
             dxt_data: res,
+            faces: tex_info.faces,
         }),
         Err(err) => Err(err),
     }
 }
 
 /// Unpacks one mip level of Unity crunch data to its DXT blocks (BC1 for DXT1, BC3 for DXT5),
-/// row by row, each level at least one block wide and high.
+/// row by row, each level at least one block wide and high, every face in turn.
 pub fn unpack_unity_crunch_level(
     data: &[u8],
     level_index: u32,
